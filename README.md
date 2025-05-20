@@ -4,12 +4,19 @@ A new Flutter plugin project.
 
 ## Getting Started
 
-This project is a starting point for a Flutter
-[plug-in package](https://flutter.dev/to/develop-plugins),
-a specialized package that includes platform-specific implementation code for
-Android and/or iOS.
+split
+```
+PdfSpliternArgs args = PdfSpliternArgs(filePath, outfileDirectory!);
+PdfSpliternResult result = await PdfSplitern.split(args);
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+chose pages to creat a new one
+
+```
+String? result = await PdfSplitern.splitToMerge(
+      filePath: filePath,
+      outpath: outPath,
+      pageNumbers: [1, 2],
+    );
+```
 

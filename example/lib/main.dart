@@ -58,43 +58,72 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(title: const Text('Plugin example app')),
-        body: Center(child: Text('Running on: $_platformVersion\n')),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            _split();
-          },
-          child: Text('Split'),
-        ),
+        body: Center(child: Column(
+          children: [
+            Text('Running on: $_platformVersion\n'),
+
+            ElevatedButton(
+              onPressed: () {
+                _split();
+              },
+              child: Text('Split'),
+            ),
+
+            ElevatedButton(
+              onPressed: () {
+                _splitToMerge();
+              },
+              child: Text('Split to Merge'),
+            ),
+            
+          ],
+        )),
       ),
     );
   }
 
   Future<void> _split() async {
-    // 1. 读取 assets 文件内容
-    ByteData data = await rootBundle.load('assets/files/pdftestfile.pdf');
+    final outfileDirectory = await FilePicker.platform.getDirectoryPath();
+    print(outfileDirectory);
 
-    // 2. 获取沙盒目录
-    Directory directory = await getApplicationDocumentsDirectory();
-    String newPath = '${directory.path}/pdfinput.pdf';
+    String filePath = await _assetsfileToAppDirectory('assets/files/pdftestfile.pdf');
+    PdfSpliternArgs args = PdfSpliternArgs(filePath, outfileDirectory!);
+    PdfSpliternResult result = await PdfSplitern.split(args);
+    print(result);
+    // await _pdfSpliternPlugin.split(filePath: 'assets/files/test.pdf', outDirectory: 'assets/files/output', outFileNamePrefix: 'test');
+  }
+
+
+
+  Future<void> _splitToMerge() async {
 
     final fileDirectory = await FilePicker.platform.getDirectoryPath();
     print(fileDirectory);
-
-    // 3. 写入沙盒目录
-    File newFile = File(newPath);
-    await newFile.writeAsBytes(data.buffer.asUint8List());
-
+    
+    String filePath = await _assetsfileToAppDirectory('assets/files/pdftestfile.pdf');
     // 4. 现在 newFile 就是一个真实的文件，可以用 File 相关 API 处理
     //String outPath = '${directory.path}/test_out.pdf';
     String outPath = '$fileDirectory/test_out.pdf';
 
-    
     String? result = await PdfSplitern.splitToMerge(
-      filePath: newFile.path,
+      filePath: filePath,
       outpath: outPath,
       pageNumbers: [1, 2],
     );
     print(result);
-    // await _pdfSpliternPlugin.split(filePath: 'assets/files/test.pdf', outDirectory: 'assets/files/output', outFileNamePrefix: 'test');
+  }
+
+  Future<String> _assetsfileToAppDirectory(String assetsFilePath) async {
+    // 1. 读取 assets 文件内容
+    ByteData data = await rootBundle.load('assets/files/pdftestfile.pdf');
+
+    // 2. 获取沙盒目录, 这个是不需要权限就能写的目录
+    Directory directory = await getApplicationCacheDirectory();
+    String newPath = '${directory.path}/pdfinput.pdf';
+
+    // 3. 写入沙盒目录
+    File newFile = File(newPath);
+    await newFile.writeAsBytes(data.buffer.asUint8List());
+    return newFile.path;
   }
 }
