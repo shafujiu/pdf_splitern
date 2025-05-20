@@ -1,7 +1,7 @@
 name: pdf_splitern
 description: "A new Flutter plugin project."
-version: 0.0.1
-homepage:
+version: 1.0.0-dev.1
+repository: https://github.com/shafujiu/pdf_splitern
 
 environment:
   sdk: ^3.9.0-32.0.dev
