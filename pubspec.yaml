@@ -1,5 +1,5 @@
 name: pdf_splitern
-description: "A new Flutter plugin project."
+description: A Flutter plugin for splitting PDF files into individual pages. Native support for Android and iOS platforms.
 version: 1.0.0-dev.1
 repository: https://github.com/shafujiu/pdf_splitern
 
