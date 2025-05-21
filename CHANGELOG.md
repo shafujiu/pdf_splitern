@@ -7,3 +7,6 @@
 - Provided `getPlatformVersion` method to retrieve platform version 
 info.
 - Provided `split,splitToMerge` methods.
+
+## [1.0.0] - 2025-05-21
+- android plugin use background task.

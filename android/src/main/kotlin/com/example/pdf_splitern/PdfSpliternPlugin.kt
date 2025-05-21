@@ -9,6 +9,10 @@ import java.io.File
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import java.io.IOException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** PdfSpliternPlugin */
 class PdfSpliternPlugin :
@@ -19,6 +23,7 @@ class PdfSpliternPlugin :
     // This local reference serves to register the plugin with the Flutter Engine and unregister it
     // when the Flutter Engine is detached from the Activity
     private lateinit var channel: MethodChannel
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "pdf_splitern")
@@ -31,22 +36,43 @@ class PdfSpliternPlugin :
         call: MethodCall,
         result: Result
     ) {
-        if (call.method == "getPlatformVersion") {
-            result.success("Android ${android.os.Build.VERSION.RELEASE}")
-        } else if (call.method == "split") {
-            try {
-                result.success(split(call))
-            } catch (e: Exception) {
-                result.error("RENDER_ERROR", "Failed to process PDF file", e.message)
+        when (call.method) {
+            "getPlatformVersion" -> {
+                result.success("Android ${android.os.Build.VERSION.RELEASE}")
             }
-        } else if (call.method == "splitToMerge") {
-            try {
-                result.success(splitToMerge(call))
-            } catch (e: Exception) {
-                result.error("RENDER_ERROR", "Failed to process PDF file", e.message)
+            "split" -> {
+                coroutineScope.launch {
+                    try {
+                        val splitResult = withContext(Dispatchers.IO) {
+                            split(call)
+                        }
+                        withContext(Dispatchers.Main) {
+                            result.success(splitResult)
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            result.error("RENDER_ERROR", "Failed to process PDF file", e.message)
+                        }
+                    }
+                }
             }
-        } else {
-            result.notImplemented()
+            "splitToMerge" -> {
+                coroutineScope.launch {
+                    try {
+                        val mergeResult = withContext(Dispatchers.IO) {
+                            splitToMerge(call)
+                        }
+                        withContext(Dispatchers.Main) {
+                            result.success(mergeResult)
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            result.error("RENDER_ERROR", "Failed to process PDF file", e.message)
+                        }
+                    }
+                }
+            }
+            else -> result.notImplemented()
         }
     }
 
@@ -54,7 +80,7 @@ class PdfSpliternPlugin :
         channel.setMethodCallHandler(null)
     }
 
-    private fun split(call: MethodCall): Any {
+    private suspend fun split(call: MethodCall): Any {
         val args = call.arguments as Map<String, Any>
         val filePath = args["filePath"] as String
         val outDirectory = args["outDirectory"] as String
@@ -72,19 +98,26 @@ class PdfSpliternPlugin :
                 singlePage.save(File(singlePageFilename))
                 singlePage.close()
                 pagePaths.add(singlePageFilename)
+                
+                // 在主线程中发送进度更新
+                withContext(Dispatchers.Main) {
+                    channel.invokeMethod("onProgress", mapOf(
+                        "current" to i + 1,
+                        "total" to pageCount
+                    ))
+                }
             }
 
-            val splitResult = mapOf(
+            return mapOf(
                 "pageCount" to pageCount,
                 "pagePaths" to pagePaths
             )
-            return splitResult
         } finally {
             document.close()
         }
     }
 
-    private fun splitToMerge(call: MethodCall): Any {
+    private suspend fun splitToMerge(call: MethodCall): Any {
         val args = call.arguments as Map<String, Any>
         val filePath = args["filePath"] as String
         val outpath = args["outpath"] as String
@@ -94,10 +127,17 @@ class PdfSpliternPlugin :
         val mergedDocument = PDDocument()
 
         try {
-            // 按照iOS实现，我们需要反向遍历页码
-            pageNumbers.reversed().forEach { pageNumber ->
+            pageNumbers.reversed().forEachIndexed { index, pageNumber ->
                 val page = sourceDocument.getPage(pageNumber)
                 mergedDocument.addPage(page)
+                
+                // 在主线程中发送进度更新
+                withContext(Dispatchers.Main) {
+                    channel.invokeMethod("onProgress", mapOf(
+                        "current" to index + 1,
+                        "total" to pageNumbers.size
+                    ))
+                }
             }
 
             mergedDocument.save(File(outpath))
