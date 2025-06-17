@@ -36,8 +36,7 @@ class _MyAppState extends State<MyApp> {
     // Platform messages may fail, so we use a try/catch PlatformException.
     // We also handle the message potentially returning null.
     try {
-      platformVersion =
-          await _pdfSpliternPlugin.getPlatformVersion() ??
+      platformVersion = await _pdfSpliternPlugin.getPlatformVersion() ??
           'Unknown platform version';
     } on PlatformException {
       platformVersion = 'Failed to get platform version.';
@@ -58,24 +57,22 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(title: const Text('Plugin example app')),
-        body: Center(child: Column(
+        body: Center(
+            child: Column(
           children: [
             Text('Running on: $_platformVersion\n'),
-
             ElevatedButton(
               onPressed: () {
                 _split();
               },
               child: Text('Split'),
             ),
-
             ElevatedButton(
               onPressed: () {
                 _splitToMerge();
               },
               child: Text('Split to Merge'),
             ),
-            
           ],
         )),
       ),
@@ -86,31 +83,34 @@ class _MyAppState extends State<MyApp> {
     final outfileDirectory = await FilePicker.platform.getDirectoryPath();
     print(outfileDirectory);
 
-    String filePath = await _assetsfileToAppDirectory('assets/files/pdftestfile.pdf');
+    String filePath =
+        await _assetsfileToAppDirectory('assets/files/pdftestfile.pdf');
     PdfSpliternArgs args = PdfSpliternArgs(filePath, outfileDirectory!);
     PdfSpliternResult result = await PdfSplitern.split(args);
-    print(result);
+    debugPrint(result.toString());
     // await _pdfSpliternPlugin.split(filePath: 'assets/files/test.pdf', outDirectory: 'assets/files/output', outFileNamePrefix: 'test');
   }
 
-
-
   Future<void> _splitToMerge() async {
+    try {
+      final fileDirectory = await FilePicker.platform.getDirectoryPath();
+      debugPrint(fileDirectory);
 
-    final fileDirectory = await FilePicker.platform.getDirectoryPath();
-    print(fileDirectory);
-    
-    String filePath = await _assetsfileToAppDirectory('assets/files/pdftestfile.pdf');
-    // 4. 现在 newFile 就是一个真实的文件，可以用 File 相关 API 处理
-    //String outPath = '${directory.path}/test_out.pdf';
-    String outPath = '$fileDirectory/test_out.pdf';
+      String filePath =
+          await _assetsfileToAppDirectory('assets/files/pdftestfile.pdf');
+      // 4. 现在 newFile 就是一个真实的文件，可以用 File 相关 API 处理
+      //String outPath = '${directory.path}/test_out.pdf';
+      String outPath = '$fileDirectory/test_out.pdf';
 
-    String? result = await PdfSplitern.splitToMerge(
-      filePath: filePath,
-      outpath: outPath,
-      pageNumbers: [1, 2],
-    );
-    print(result);
+      String? result = await PdfSplitern.splitToMerge(
+        filePath: filePath,
+        outpath: outPath,
+        pageNumbers: [1],
+      );
+      debugPrint(result);
+    } catch (e) {
+      debugPrint(e.toString());
+    }
   }
 
   Future<String> _assetsfileToAppDirectory(String assetsFilePath) async {
